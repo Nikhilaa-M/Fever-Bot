@@ -104,12 +104,12 @@ def process_input():
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             bot_response = "Thank you for using this bot. Have a great day!"
         else:
-            # Truncate chat history if necessary
-            max_context_tokens = 16385  # Adjust according to the model's limit
-            st.session_state.chat_history = truncate_chat_history(st.session_state.chat_history, max_context_tokens)
+            # Limit chat history to the last N messages to prevent exceeding token limit
+            N = 10  # Number of messages to keep in the chat history
+            limited_chat_history = st.session_state.chat_history[-N:]
 
             # Get the result from the chain
-            result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
+            result = chain.invoke({"question": user_input, "chat_history": limited_chat_history})
 
             # Process the result
             if result['answer'] and result['answer'].strip():
