@@ -8,21 +8,19 @@ from langchain.indexes.vectorstore import VectorStoreIndexWrapper
 from langchain.vectorstores import Chroma
 from streamlit_chat import message
 from dotenv import load_dotenv  # Import load_dotenv
+from langchain.schema import Document
 
 # Custom TextLoader to handle different encodings
 from langchain_community.document_loaders.text import TextLoader
 
 class CustomTextLoader(TextLoader):
-    def lazy_load(self):
-        try:
-            # Try opening the file with UTF-8 encoding
-            with open(self.file_path, "r", encoding="utf-8") as f:
-                text = f.read()
-        except UnicodeDecodeError:
-            # If UTF-8 fails, fallback to ISO-8859-1 encoding
-            with open(self.file_path, "r", encoding="ISO-8859-1") as f:
-                text = f.read()
-        return [{"text": text}]
+    def load(self):
+        docs = []
+        with open(self.file_path, "r", encoding="utf-8", errors="ignore") as f:
+            text = f.read()
+            # Return Document objects with text content
+            docs.append(Document(page_content=text, metadata={"source": self.file_path}))
+        return docs
     
 # Load environment variables from .env file
 load_dotenv()
