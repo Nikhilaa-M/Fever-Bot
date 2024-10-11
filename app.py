@@ -9,6 +9,21 @@ from langchain.vectorstores import Chroma
 from streamlit_chat import message
 from dotenv import load_dotenv  # Import load_dotenv
 
+# Custom TextLoader to handle different encodings
+from langchain_community.document_loaders.text import TextLoader
+
+class CustomTextLoader(TextLoader):
+    def lazy_load(self):
+        try:
+            # Try opening the file with UTF-8 encoding
+            with open(self.file_path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except UnicodeDecodeError:
+            # If UTF-8 fails, fallback to ISO-8859-1 encoding
+            with open(self.file_path, "r", encoding="ISO-8859-1") as f:
+                text = f.read()
+        return [{"text": text}]
+    
 # Load environment variables from .env file
 load_dotenv()
 
@@ -30,8 +45,7 @@ def initialize_index():
         vectorstore = Chroma(persist_directory="persist", embedding_function=OpenAIEmbeddings())
         return VectorStoreIndexWrapper(vectorstore=vectorstore)
     else:
-        file_path = os.path.join(os.path.dirname(__file__), 'fever.txt')
-        loader = TextLoader(file_path)
+        loader = CustomTextLoader("fever.txt")
         if PERSIST:
             return VectorstoreIndexCreator(vectorstore_cls=Chroma, vectorstore_kwargs={"persist_directory": "persist"}).from_loaders([loader])
         else:
