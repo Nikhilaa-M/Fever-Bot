@@ -46,9 +46,84 @@ def get_chain(_index):
         max_tokens_limit=4000,  # Add this line
     )
 
-# ... existing code ...
+def process_input():
+    global chain
+    user_input = st.session_state.user_input
+    if user_input:
+        if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
+            bot_response = "Thank you for using this bot. Have a great day!"
+        else:
+            # Get the result from the chain
+            result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
+
+            # Process the result
+            if result['answer'] and result['answer'].strip():
+                if "fever" in result['answer'].lower():
+                    bot_response = result['answer']
+                else:
+                    bot_response = "I am a fever bot. Please ask about fever."
+            else:
+                if any(keyword in user_input.lower() for keyword in medical_keywords):
+                    bot_response = "Sorry, I don't have information about your query. I will let the doctor know."
+                else:
+                    bot_response = "I am a fever bot. Please ask about fever."
+
+        st.session_state.chat_history.append((user_input, bot_response))
+        st.session_state.user_input = ""  # Clear the input
+
+        # Display the latest user input and bot response
+        st.text_area("You:", value=user_input, height=100, disabled=True)
+        st.text_area("Bot:", value=bot_response, height=200, disabled=True)
 
 def main():
+    global chain
+    st.title("Chatbot for Fever")
+
+    # Initialize session state for chat history (for internal use only)
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Initialize index and chain
+    index = initialize_index()
+    chain = get_chain(index)
+
+    # User input at the bottom
+    with st.container():
+        st.text_input("Type something...", key="user_input", on_change=process_input)
+
+if __name__ == "__main__":
+    main()
+
+
+'''def main():
+    global chain
+    st.title("Chatbot for Fever")
+
+    # Initialize session state for chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Initialize index and chain
+    index = initialize_index()
+    chain = get_chain(index)
+
+    # Chat container
+    chat_container = st.container()
+
+    # Display chat history
+    with chat_container:
+        for i, (user_msg, bot_msg) in enumerate(st.session_state.chat_history):
+            message(user_msg, is_user=True, key=f"user_msg_{i}")
+            message(bot_msg, key=f"bot_msg_{i}")
+
+    # User input at the bottom
+    with st.container():
+        st.text_input("Type something...", key="user_input", on_change=process_input)
+
+if __name__ == "__main__":
+    main()'''
+
+'''def main():
     global chain
     st.title("Chatbot for Fever")
 
@@ -91,3 +166,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''
