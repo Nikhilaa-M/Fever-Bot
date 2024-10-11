@@ -9,6 +9,7 @@ from langchain.vectorstores import Chroma
 from streamlit_chat import message
 from dotenv import load_dotenv  # Import load_dotenv
 from langchain.schema import Document
+import tiktoken  # Import token counting library
 
 # Custom TextLoader to handle different encodings
 from langchain_community.document_loaders.text import TextLoader
@@ -18,7 +19,6 @@ class CustomTextLoader(TextLoader):
         docs = []
         with open(self.file_path, "r", encoding="utf-8", errors="ignore") as f:
             text = f.read()
-            # Return Document objects with text content
             docs.append(Document(page_content=text, metadata={"source": self.file_path}))
         return docs
     
@@ -35,20 +35,6 @@ PERSIST = False
 medical_keywords = ["medicine", "doctor", "treatment", "symptom", "diagnosis", "medication", "hospital", "disease"]
 
 chain = None
-
-# Function to count tokens in a message (basic implementation)
-def count_tokens(message):
-    return len(message.split())  # Adjust as necessary for more accurate counting
-
-# Function to truncate chat history if it exceeds a given token limit
-def truncate_chat_history(chat_history, max_tokens):
-    total_tokens = sum(count_tokens(msg[0]) + count_tokens(msg[1]) for msg in chat_history)
-    
-    while total_tokens > max_tokens:
-        chat_history.pop(0)  # Remove the oldest message
-        total_tokens = sum(count_tokens(msg[0]) + count_tokens(msg[1]) for msg in chat_history)
-
-    return chat_history
 
 @st.cache_resource
 def initialize_index():
@@ -71,6 +57,11 @@ def get_chain(_index):
         llm=ChatOpenAI(model="gpt-3.5-turbo"),
         retriever=_index.vectorstore.as_retriever(search_kwargs={"k": 1}),
     )
+
+def token_count(messages):
+    tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    total_tokens = sum(len(tokenizer.encode(msg[0])) + len(tokenizer.encode(msg[1])) for msg in messages)
+    return total_tokens
 
 def main():
     global chain
@@ -104,12 +95,19 @@ def process_input():
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             bot_response = "Thank you for using this bot. Have a great day!"
         else:
-            # Limit chat history to the last N messages to prevent exceeding token limit
-            N = 10  # Number of messages to keep in the chat history
-            limited_chat_history = st.session_state.chat_history[-N:]
+            # Limit the number of messages sent in the history to the last 5
+            max_history_length = 5
+            chat_history_to_send = st.session_state.chat_history[-max_history_length:]
+
+            # Check the total token count
+            total_tokens = token_count(chat_history_to_send) + len(tiktoken.encoding_for_model("gpt-3.5-turbo").encode(user_input))
+
+            if total_tokens > 16385:
+                st.warning("Your conversation is too long. Please shorten it.")
+                return
 
             # Get the result from the chain
-            result = chain.invoke({"question": user_input, "chat_history": limited_chat_history})
+            result = chain.invoke({"question": user_input, "chat_history": chat_history_to_send})
 
             # Process the result
             if result['answer'] and result['answer'].strip():
