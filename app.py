@@ -41,6 +41,20 @@ def initialize_index():
     if PERSIST and os.path.exists("persist"):
         st.write("Reusing index...\n")
         vectorstore = Chroma(persist_directory="persist", embedding_function=OpenAIEmbeddings())
+    else:
+        loader = CustomTextLoader("fever.txt")  # Ensure this path is correct
+        vectorstore = Chroma(embedding_function=OpenAIEmbeddings(), persist_directory="persist")
+        # Create a collection if it doesn't exist
+        vectorstore.create_collection("fever_collection")
+        vectorstore.add_documents(loader.load())  # Add documents to the collection
+
+    return VectorStoreIndexWrapper(vectorstore=vectorstore)
+
+'''@st.cache_resource
+def initialize_index():
+    if PERSIST and os.path.exists("persist"):
+        st.write("Reusing index...\n")
+        vectorstore = Chroma(persist_directory="persist", embedding_function=OpenAIEmbeddings())
         return VectorStoreIndexWrapper(vectorstore=vectorstore)
     else:
         loader = CustomTextLoader("fever.txt")
@@ -50,7 +64,7 @@ def initialize_index():
             return VectorstoreIndexCreator(
                 vectorstore_cls=Chroma,
                 embedding=OpenAIEmbeddings()
-            ).from_loaders([loader])
+            ).from_loaders([loader])'''
 
 @st.cache_resource
 def get_chain(_index):
