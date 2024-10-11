@@ -7,10 +7,13 @@ from langchain.indexes import VectorstoreIndexCreator
 from langchain.indexes.vectorstore import VectorStoreIndexWrapper
 from langchain.vectorstores import Chroma
 from streamlit_chat import message
+from dotenv import load_dotenv  # Import load_dotenv
 
-# Set your OpenAI API key
+# Load environment variables from .env file
+load_dotenv()
+
+# Access the OPENAI_API_KEY from the environment
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-
 
 # Enable to save to disk & reuse the model (for repeated queries on the same data)
 PERSIST = False
@@ -27,7 +30,8 @@ def initialize_index():
         vectorstore = Chroma(persist_directory="persist", embedding_function=OpenAIEmbeddings())
         return VectorStoreIndexWrapper(vectorstore=vectorstore)
     else:
-        loader = TextLoader("fever.txt")  # Ensure this path is correct
+        file_path = os.path.join(os.path.dirname(__file__), 'fever.txt')
+        loader = TextLoader(file_path)
         if PERSIST:
             return VectorstoreIndexCreator(vectorstore_cls=Chroma, vectorstore_kwargs={"persist_directory": "persist"}).from_loaders([loader])
         else:
