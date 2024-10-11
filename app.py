@@ -52,13 +52,17 @@ def main():
     index = initialize_index()
     chain = get_chain(index)
 
+    # Initialize an empty list for chat history
+    chat_history = []
+
     user_input = st.text_input("Type something...")
 
     if user_input:
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             st.write("Thank you for using this bot. Have a great day!")
         else:
-            result = chain.invoke({"question": user_input})
+            # Call the chain with chat history (empty for now)
+            result = chain.invoke({"question": user_input, "chat_history": chat_history})
 
             if result['answer'] and result['answer'].strip():
                 if "fever" in result['answer'].lower():
@@ -70,6 +74,9 @@ def main():
                     st.write("Sorry, I don't have information about your query. I will let the doctor know.")
                 else:
                     st.write("I am a fever bot. Please ask about fever.")
+
+        # Update the chat history after processing input
+        chat_history.append((user_input, result['answer']))
 
 if __name__ == "__main__":
     main()
