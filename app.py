@@ -46,39 +46,17 @@ def get_chain(_index):
         max_tokens_limit=4000,  # Use the specified max tokens limit
     )
 
-def main():
-    global chain
-    st.title("Chatbot for Fever")
-
-    index = initialize_index()
-    chain = get_chain(index)
-
-    # Initialize session state for chat history
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-
-    # Chat container for displaying history
-    chat_container = st.container()
-    
-    with chat_container:
-        # Display chat history
-        for i, (user_msg, bot_msg) in enumerate(st.session_state.chat_history):
-            message(user_msg, is_user=True, key=f"user_msg_{i}")
-            message(bot_msg, key=f"bot_msg_{i}")
-
-    # User input at the bottom
-    with st.container():
-        st.text_input("Type something...", key="user_input", on_change=process_input)
-
 def process_input():
     global chain
     user_input = st.session_state.user_input
+    
     if user_input:
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             st.session_state.user_input = ""  # Clear the input
             st.session_state.chat_history.append((user_input, "Thank you for using this bot. Have a great day!"))
             st.success("Thank you for using this bot. Have a great day!")
-            st.button("Reload", on_click=lambda: st.experimental_rerun())  # Button to reload the app
+            # Set a flag to disable the input box
+            st.session_state.disable_input = True  
         else:
             # Get the result from the chain
             result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
@@ -97,6 +75,34 @@ def process_input():
 
             st.session_state.chat_history.append((user_input, bot_response))
             st.session_state.user_input = ""  # Clear the input
+
+def main():
+    global chain
+    st.title("Chatbot for Fever")
+
+    index = initialize_index()
+    chain = get_chain(index)
+
+    # Initialize session state for chat history and disable input
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'disable_input' not in st.session_state:
+        st.session_state.disable_input = False
+
+    # Chat container for displaying history
+    chat_container = st.container()
+    
+    with chat_container:
+        # Display chat history
+        for i, (user_msg, bot_msg) in enumerate(st.session_state.chat_history):
+            message(user_msg, is_user=True, key=f"user_msg_{i}")
+            message(bot_msg, key=f"bot_msg_{i}")
+
+    # User input at the bottom
+    with st.container():
+        # Disable input if the user has typed a termination command
+        st.text_input("Type something...", key="user_input", on_change=process_input, disabled=st.session_state.disable_input)
+
 
 if __name__ == "__main__":
     main()
