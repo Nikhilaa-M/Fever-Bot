@@ -36,6 +36,20 @@ medical_keywords = ["medicine", "doctor", "treatment", "symptom", "diagnosis", "
 
 chain = None
 
+# Function to count tokens in a message (basic implementation)
+def count_tokens(message):
+    return len(message.split())  # Adjust as necessary for more accurate counting
+
+# Function to truncate chat history if it exceeds a given token limit
+def truncate_chat_history(chat_history, max_tokens):
+    total_tokens = sum(count_tokens(msg[0]) + count_tokens(msg[1]) for msg in chat_history)
+    
+    while total_tokens > max_tokens:
+        chat_history.pop(0)  # Remove the oldest message
+        total_tokens = sum(count_tokens(msg[0]) + count_tokens(msg[1]) for msg in chat_history)
+
+    return chat_history
+
 @st.cache_resource
 def initialize_index():
     if PERSIST and os.path.exists("persist"):
@@ -90,6 +104,10 @@ def process_input():
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             bot_response = "Thank you for using this bot. Have a great day!"
         else:
+            # Truncate chat history if necessary
+            max_context_tokens = 16385  # Adjust according to the model's limit
+            st.session_state.chat_history = truncate_chat_history(st.session_state.chat_history, max_context_tokens)
+
             # Get the result from the chain
             result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
 
