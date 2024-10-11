@@ -75,7 +75,10 @@ def process_input():
     user_input = st.session_state.user_input
     if user_input:
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
-            bot_response = "Thank you for using this bot. Have a great day!"
+            st.session_state.user_input = ""  # Clear the input
+            st.session_state.chat_history.append((user_input, "Thank you for using this bot. Have a great day!"))
+            st.success("Thank you for using this bot. Have a great day!")
+            st.button("Reload", on_click=lambda: st.experimental_rerun())  # Button to reload the app
         else:
             # Get the result from the chain
             result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
@@ -92,8 +95,8 @@ def process_input():
                 else:
                     bot_response = "I am a fever bot. Please ask about fever."
 
-        st.session_state.chat_history.append((user_input, bot_response))
-        st.session_state.user_input = ""  # Clear the input
+            st.session_state.chat_history.append((user_input, bot_response))
+            st.session_state.user_input = ""  # Clear the input
 
 if __name__ == "__main__":
     main()
