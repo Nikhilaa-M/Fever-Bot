@@ -43,7 +43,10 @@ def get_chain(_index):
     return ConversationalRetrievalChain.from_llm(
         llm=ChatOpenAI(model="gpt-3.5-turbo"),
         retriever=_index.vectorstore.as_retriever(search_kwargs={"k": 1}),
+        max_tokens_limit=4000,  # Add this line
     )
+
+# ... existing code ...
 
 def main():
     global chain
@@ -53,7 +56,8 @@ def main():
     chain = get_chain(index)
 
     # Initialize an empty list for chat history
-    chat_history = []
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
 
     user_input = st.text_input("Type something...")
 
@@ -61,22 +65,29 @@ def main():
         if user_input.lower() in ['quit', 'exit', 'bye', 'thank you']:
             st.write("Thank you for using this bot. Have a great day!")
         else:
-            # Call the chain with chat history (empty for now)
-            result = chain.invoke({"question": user_input, "chat_history": chat_history})
+            try:
+                # Call the chain with chat history
+                result = chain.invoke({"question": user_input, "chat_history": st.session_state.chat_history})
 
-            if result['answer'] and result['answer'].strip():
-                if "fever" in result['answer'].lower():
-                    st.write(result['answer'])
+                if result['answer'] and result['answer'].strip():
+                    if "fever" in result['answer'].lower():
+                        st.write(result['answer'])
+                    else:
+                        st.write("I am a fever bot. Please ask about fever.")
                 else:
-                    st.write("I am a fever bot. Please ask about fever.")
-            else:
-                if any(keyword in user_input.lower() for keyword in medical_keywords):
-                    st.write("Sorry, I don't have information about your query. I will let the doctor know.")
-                else:
-                    st.write("I am a fever bot. Please ask about fever.")
+                    if any(keyword in user_input.lower() for keyword in medical_keywords):
+                        st.write("Sorry, I don't have information about your query. I will let the doctor know.")
+                    else:
+                        st.write("I am a fever bot. Please ask about fever.")
 
-        # Update the chat history after processing input
-        chat_history.append((user_input, result['answer']))
+                # Update the chat history after processing input
+                st.session_state.chat_history.append((user_input, result['answer']))
+
+                # Limit the chat history to the last 5 interactions
+                st.session_state.chat_history = st.session_state.chat_history[-5:]
+
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
